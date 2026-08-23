@@ -1,6 +1,6 @@
 # makemany
 
-A staged implementation of a character-level language model trained on the names in [`names.txt`](names.txt), inspired by Andrej Karpathy's [makemore](https://github.com/karpathy/makemore). 
+A staged implementation of a character-level language model trained on a list of names, inspired by Andrej Karpathy's [makemore](https://github.com/karpathy/makemore). 
 
 I organized it into five increasingly complex experiments: a bigram language model, a multilayer perceptron (MLP), batch normalization, manual backpropagation, and a custom layered model with a WaveNet-style structure.
 
@@ -103,7 +103,7 @@ I train with mini-batches of 32 for 50,000 steps using cross-entropy loss and a 
 				      -> next-character logits
 ```
 
-In [`3_batch_norm.ipynb`](3_batch_norm.ipynb), I keep the data representation and MLP dimensions from stage 2. I normalize the hidden preactivations across each mini-batch, then apply a learned gain and bias before `tanh`. During training, I update running means and standard deviations; after training, I use those running values for evaluation and generation.
+In [`3_batch_norm.ipynb`](3_batch_norm.ipynb), I keep the data representation and MLP dimensions from stage 2. I normalize the hidden preactivations across each mini-batch, then apply a learned gain and bias before the `tanh` layer. During training, I update running means and standard deviations; after training, I use those running values for evaluation and generation.
 
 I train for 200,000 steps with batches of 32 and a learning rate of `0.01`. The notebook records loss values, calibrates the normalization statistics, evaluates the training and development losses, and samples names.
 
