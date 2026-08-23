@@ -45,7 +45,7 @@ The MLP notebooks shuffle the names with seed `42` and split them approximately 
 | 2. MLP | Three character indices | Embedding, concatenation, `tanh`, output logits | PyTorch autograd |
 | 3. Batch normalization | Same three-character context | MLP with normalized hidden preactivations | PyTorch autograd and running statistics |
 | 4. Manual backpropagation | Same three-character context | Same normalized MLP, with explicit derivatives | Hand-written gradients |
-| 5. Custom layered model | Three character indices | Progressive flattening and repeated nonlinear blocks | Custom `Sequential.fit` loop |
+| 5. Custom layered model | Three character indices | Progressive flattening and repeated nonlinear blocks | Custom `Sequential.fit` loop using PyTorch autograd |
 
 ### Stage 1: Bigram baseline
 
@@ -66,6 +66,7 @@ one-hot character (27) -> weight matrix (27 x 27) -> logits -> probabilities
 I optimize this weight matrix with mean negative log likelihood for 100 iterations. This gives me a direct comparison between a count-based transition table and a learned parameter matrix with the same input and output structure.
 
 ![visualization of bigram language model](images/Figure_2.png)
+*Probabilities of each of the 729 possible bigrams*
 
 ### Stage 2: Character-embedding MLP
 
@@ -90,6 +91,7 @@ In [`2_mlp.py`](2_mlp.py), I replace the single-character input with a rolling c
 I train with mini-batches of 32 for 50,000 steps using cross-entropy loss and a learning rate of `0.1`. I then evaluate the development loss and sample 20 names by repeatedly shifting the context and drawing from the output softmax.
 
 ![graph of the MLP's learning over time, measured by cross-entropy loss](images/Figure_3.png)
+*MLP's learning over time, measured by cross-entropy loss*
 
 ### Stage 3: MLP with batch normalization
 
@@ -125,7 +127,8 @@ In [`4_manual_backprop.ipynb`](4_manual_backprop.ipynb), I first calculate cross
 
 The final training loop does not call `Tensor.backward()`. After the manual updates, I sample five names from the model.
 
-![visualization of manual backpropagation](images/Figure_4.png)
+![visualization gradients for each item in logits,as seen in Stage 4](images/Figure_4.png)
+*Visualization of the gradients for each item in `logits`, as seen in Stage 4. Black squares indicate gradients at or near zero.*
 
 ### Stage 5: Custom layered model
 
@@ -148,10 +151,15 @@ In [`5_rnn.ipynb`](5_rnn.ipynb), I implement a small PyTorch-like layer system w
 The model uses 10-dimensional embeddings, 68 hidden units, and a final 27-way output layer. My `Sequential.fit` method samples mini-batches, runs the forward pass, computes cross-entropy, clears gradients, calls the existing tensor backward mechanism, updates parameters, and records loss. It also lowers the learning rate after half of the requested training steps.
 
 ![graph of the model's learning over time, measured by cross-entropy loss](images/Figure_5.png)
+*The model's learning over time, measured by cross-entropy loss.*
 
-## Objective and Sampling
+## Objective and sampling
 
-Across the neural experiments, I optimize cross-entropy loss over the next-character targets. During generation, I start with a context of three `.` symbols, sample from the output softmax, shift the context, and stop when the sampled index is `0`. I use explicitly seeded PyTorch generators in the scripts and notebooks, although model initialization and execution details differ between parts.
+Across the experiments, I optimize cross-entropy loss over the next-character targets. 
+
+During generation, I start with a context of three `.` symbols, sample from the output softmax, shift the context, and stop when the sampled index is `0`, which indicates "stop". 
+
+I use explicitly seeded PyTorch generators in the scripts and notebooks, although model initialization and execution details differ between parts.
 
 ## Setup
 
@@ -168,24 +176,24 @@ On Windows PowerShell:
 python -m pip install -r requirements.txt
 ```
 
-I do not define a separate command-line entry point. You can run the first two experiments from the repository root so their relative read of `names.txt` resolves correctly:
+You can run the first two experiments from the repository root so their relative read of `names.txt` resolves correctly:
 
 ```text
 python 1_bigram.py
 python 2_mlp.py
 ```
 
-You can then open the three `.ipynb` files in Jupyter or VS Code and execute their cells in order. The notebooks also expect the repository root to be the working directory because they read `names.txt` using a relative path. 
+You can then open the three `.ipynb` files in Jupyter or VS Code and execute their cells in order. The notebooks also expect the repository root to be the working directory, as they read `names.txt` using a relative path. 
 
 Part 3 writes generated output to `backfeed.txt` in one of its final cells so I can experiment with training the model on its own output.
 
-## Reproducibility Notes
+## Reproducibility notes
 
 I use fixed seeds in several places, including `42` for shuffling the MLP dataset and `2147483647`-based seeds for PyTorch generators. Actual results, even when using the same seeds as me, may differ slightly.
 
 ## Scope
 
-I present this as an educational implementation rather than a packaged training library. The experiments share data-preparation conventions but retain separate, exploratory code paths. In particular, I construct a test split in the notebooks, but the visible evaluation cells report training and development losses only. I include no saved model checkpoints or command-line configuration interface.
+I present this as an educational implementation rather than a packaged training library. The experiments share data-preparation conventions but retain separate, exploratory code paths. 
 
 ## References
 
